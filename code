@@ -1,0 +1,270 @@
+import pandas as pd
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.preprocessing import LabelEncoder
+from sklearn.metrics import mean_absolute_error, r2_score
+import matplotlib.pyplot as plt
+
+# Load dataset for feature 1
+data = pd.read_csv('/content/hajj_umrah_crowd_management_dataset.csv')
+
+# Display initial info
+print("Results of feature 1:")
+print("Initial Data Information:")
+print(data.info())
+print(data.head())
+
+# Drop duplicates and missing values
+data = data.drop_duplicates()
+data = data.dropna()
+
+# Encode 'zone' if exists
+if 'zone' in data.columns:
+    le = LabelEncoder()
+    data['zone_encoded'] = le.fit_transform(data['zone'])
+
+# Convert 'timestamp' if exists and extract 'hour'
+if 'timestamp' in data.columns:
+    data['timestamp'] = pd.to_datetime(data['timestamp'], errors='coerce')
+    data['hour'] = data['timestamp'].dt.hour
+    data = data.dropna(subset=['timestamp'])  # drop rows where timestamp failed to convert
+
+# Define target
+target_column = 'Crowd_Density'
+if target_column not in data.columns:
+    raise ValueError(f"Column '{target_column}' not found.")
+
+# Select features
+features = data.select_dtypes(include=[np.number]).columns.tolist()
+if target_column in features:
+    features.remove(target_column)
+
+print("\nSelected Features:", features)
+
+# Encode the target column 'Crowd_Density' if it's categorical
+if data[target_column].dtype == 'object':
+    target_encoder = LabelEncoder()
+    data[target_column] = target_encoder.fit_transform(data[target_column])
+# Prepare training data
+X = data[features]
+y = data[target_column]
+
+# Train/test split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict
+y_pred = model.predict(X_test)
+
+# Evaluation
+mae = mean_absolute_error(y_test, y_pred)
+print(f"\nMean Absolute Error (MAE): {mae:.2f}")
+
+# Show actual vs predicted
+results = pd.DataFrame({'Actual': y_test.values, 'Predicted': y_pred})
+print("\nActual vs. Predicted Results:")
+print(results.head(20))
+
+
+
+# Load dataset for feature 2
+file_path = "/content/supermarket_sales - Sheet1.csv"
+df = pd.read_csv(file_path)
+
+# Convert 'Date' to datetime format
+df['Date'] = pd.to_datetime(df['Date'])
+
+# Convert 'Time' to datetime format and extract the hour
+df['Time'] = pd.to_datetime(df['Time'], format='%H:%M').dt.hour
+
+# Encode categorical variables using one-hot encoding
+df = pd.get_dummies(df, columns=['Product line', 'Payment', 'Branch', 'City', 'Customer type', 'Gender'], drop_first=True)
+
+# Select relevant features (excluding 'Quantity' since it's the target variable)
+features = ['Unit price', 'Time'] + [col for col in df.columns if 'Product line_' in col]
+X = df[features]
+y = df['Quantity']
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train Random Forest model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate model performance
+mae = mean_absolute_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+# Print results
+print("Results of feature 2:")
+print(f"Mean Absolute Error (MAE): {mae}")
+print(f"R² Score: {r2}")
+
+# Print Actual vs. Predicted results
+actual_vs_predicted = pd.DataFrame({'Actual': y_test.values, 'Predicted': y_pred})
+print(actual_vs_predicted.head(10))
+
+
+
+
+
+
+# Load the dataset for feature 5
+df = pd.read_csv('/content/FIFA17_official_data.csv')
+
+# Data Cleaning
+def clean_data(df):
+    # Convert value and wage to numeric (remove €, M, K)
+    def convert_currency(val):
+        if pd.isna(val) or val == 'nan':
+            return np.nan
+        try:
+            val = str(val).replace('€', '')
+            if 'M' in val:
+                return float(val.replace('M', '')) * 1e6
+            elif 'K' in val:
+                return float(val.replace('K', '')) * 1e3
+            return float(val)
+        except:
+            return np.nan
+
+    df['Value'] = df['Value'].apply(convert_currency)
+    df['Wage'] = df['Wage'].apply(convert_currency)
+
+    # Convert height to cm (from feet'inches)
+    def convert_height(height):
+        if pd.isna(height):
+            return np.nan
+        try:
+            feet, inches = str(height).split("'")
+            return int(feet)*30.48 + int(inches)*2.54
+        except:
+            return np.nan
+
+    df['Height'] = df['Height'].apply(convert_height)
+
+    # Convert weight to kg (from lbs)
+    def convert_weight(weight):
+        if pd.isna(weight):
+            return np.nan
+        try:
+            return float(str(weight).replace('lbs', '')) * 0.453592
+        except:
+            return np.nan
+
+    df['Weight'] = df['Weight'].apply(convert_weight)
+
+    # Extract numeric position from position column
+    df['Position'] = df['Position'].str.extract(r'pos(\d+)').astype(float)
+
+    # Convert joined date to datetime
+    df['Joined'] = pd.to_datetime(df['Joined'], errors='coerce')
+
+    # Convert contract valid until to datetime
+    df['Contract Valid Until'] = pd.to_datetime(df['Contract Valid Until'], errors='coerce')
+
+    # Calculate contract length in days
+    df['Contract Length'] = (df['Contract Valid Until'] - df['Joined']).dt.days
+
+    # Drop columns with many missing values or not useful for prediction
+    df = df.drop(['ID', 'Photo', 'Flag', 'Club Logo', 'Loaned From', 'Joined',
+                  'Contract Valid Until', 'Real Face', 'Jersey Number', 'Best Position'], axis=1)
+
+    # Convert categorical variables to numeric
+    categorical_cols = ['Preferred Foot', 'Work Rate', 'Body Type', 'Nationality', 'Club']
+    df = pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+
+    # Drop rows with missing target values
+    df = df.dropna(subset=['Overall'])
+
+    return df
+
+# Clean the data
+cleaned_df = clean_data(df)
+
+# Prepare features and target
+X = cleaned_df.drop(['Name', 'Overall'], axis=1)
+y = cleaned_df['Overall']
+player_names = cleaned_df['Name']
+
+# Handle remaining missing values
+X = X.fillna(X.median())
+
+# Split data into training and testing sets
+X_train, X_test, y_train, y_test, names_train, names_test = train_test_split(
+    X, y, player_names, test_size=0.2, random_state=42)
+
+# Build the model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Create a DataFrame with actual vs predicted values
+results = pd.DataFrame({
+    'Player': names_test,
+    'Actual Rating': y_test,
+    'Predicted Rating': y_pred,
+    'Difference': y_test - y_pred
+})
+
+# Print the first 20 results
+print("Results of feature 5:")
+print("Actual vs Predicted Ratings (First 20 Players):")
+print(results.head(20).to_string(index=False))
+
+# Evaluate the model
+mae = mean_absolute_error(y_test, y_pred)
+print(f"\nMean Absolute Error (MAE): {mae:.2f}")
+
+# Assuming 'results' DataFrame from your previous code
+num_players_to_show = 20  # Adjust as needed
+results_subset = results.head(num_players_to_show)
+
+# Create bar plot
+x = np.arange(len(results_subset))  # the label locations
+width = 0.35  # the width of the bars
+
+fig, ax = plt.subplots(figsize=(12, 6))  # Adjust figure size as needed
+rects1 = ax.bar(x - width/2, results_subset['Actual Rating'], width, label='Actual')
+rects2 = ax.bar(x + width/2, results_subset['Predicted Rating'], width, label='Predicted')
+
+# Add some text for labels, title and custom x-axis tick labels, etc.
+ax.set_ylabel('Overall Rating')
+ax.set_title('Actual vs. Predicted Player Ratings')
+ax.set_xticks(x)
+ax.set_xticklabels(results_subset['Player'], rotation=45, ha='right')  # Rotate player names for readability
+ax.legend()
+
+# Add data labels on top of bars
+def autolabel(rects):
+    """Attach a text label above each bar in `rects`, displaying its height."""
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate('{}'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
+
+autolabel(rects1)
+autolabel(rects2)
+
+fig.tight_layout()
+plt.show()
+
+# Show feature importance
+feature_importance = pd.Series(model.feature_importances_, index=X.columns)
+top_features = feature_importance.sort_values(ascending=False).head(10)
+print("\nTop 10 Important Features:")
+print(top_features)

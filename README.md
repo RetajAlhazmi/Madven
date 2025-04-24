@@ -67,3 +67,6 @@
 ✔️ تقليل أوقات الانتظار في كل شيء (المقاعد، الطعام، المواقف).
 ✔️ إضافة تجربة رقمية مبتكرة تجعل مشاهدة المباريات أكثر تفاعلًا.
 ✔️ زيادة الكفاءة التشغيلية للملاعب عبر إدارة ذكية للموارد.
+
+Prototype link: 
+https://www.figma.com/proto/7nzbgkc9PKLTDi7DQb9IgY/AI-Smart-Stadium?node-id=1590-204&t=aJc9CefQMM5kYDtj-1&starting-point-node-id=1590%3A204
